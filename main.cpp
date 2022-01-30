@@ -17,6 +17,7 @@ char *concat(char *a, char *b) {
     strcat(concatenatedString, a);
     strcat(concatenatedString, b);
 
+    return concatenatedString;
 }
 
 char *baseResponse() {
