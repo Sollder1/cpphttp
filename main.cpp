@@ -4,15 +4,20 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <cstring>
-
+#include <fcntl.h>
+#include <cstdlib>
 
 #define defaultBufferSize 4096
 #define pathLength 1024
+#define basePath "/var/cpphttp"
 
+const char *baseHeaders = "\r\nserver: SollderHttp\r\nContent-Type: text/html\r\nConnection: Closed\r\n\r\n";
+
+char *read(int fd);
 
 char *concat(char *a, char *b) {
 
-    char *concatenatedString = (char *) malloc(strlen(a) + strlen(b) - 1);
+    char *concatenatedString = (char *) malloc(strlen(a) + strlen(b));
 
     strcat(concatenatedString, a);
     strcat(concatenatedString, b);
@@ -20,20 +25,42 @@ char *concat(char *a, char *b) {
     return concatenatedString;
 }
 
-char *baseResponse() {
-    return "HTTP/1.1 200 OK\r\n"
-           "Server: SollderHttp\r\n"
-           "Content-Type: text/html\r\n"
-           "Connection: Closed\r\n"
-           "\r\n";
+char *baseResponse(char *code) {
+
+    char *result = (char *) malloc(strlen(baseHeaders) + 128);
+
+    strcat(result, "HTTP/1.1 ");
+    strcat(result, code);
+    strcat(result, " Error");
+    strcat(result, baseHeaders);
+
+    return result;
 }
+
+char *getStaticNotFoundErrorResponse() {
+
+    char *string = "<h1>404 - Resource not found</h1>"
+                   "The requested Resource could not be found.";
+    return concat(baseResponse("404"), string);
+}
+
 
 char *getStaticUnsupportedMethodErrorResponse() {
 
     char *string = "<h1>415 - Unsupported Method</h1>"
                    "The Method provided is not supported. We only support GET at the moment.";
-    return concat(baseResponse(), string);
+    return concat(baseResponse("415"), string);
 }
+
+char *readFileContent(char *path) {
+    int fd = open(concat(basePath, path), O_SYNC);
+
+    if (fd < 0) {
+        return getStaticNotFoundErrorResponse();
+    }
+    return concat(baseResponse("200"), read(fd));
+}
+
 
 char *handleRequest(const char *requestRaw) {
 
@@ -50,26 +77,19 @@ char *handleRequest(const char *requestRaw) {
     }
     printf("%s \n", method);
 
-
+    printf("1\n");
     char *path = (char *) malloc(pathLength);
+    printf("2\n");
     size_t offset = strlen(method) + 1;
+    printf("3\n");
     for (int i = 0; i < pathLength; ++i) {
         if (requestRaw[i + offset] == ' ') {
-            memcpy(path, requestRaw + offset, i);
+            memmove(path, requestRaw + offset, i);
             break;
         }
     }
 
-    printf("%s \n", path);
-
-    //TODO...
-
-    return "HTTP/1.1 200 OK\r\n"
-           "Server: SollderHttp\r\n"
-           "Content-Type: text/html\r\n"
-           "Connection: Closed\r\n"
-           "\r\n"
-           "<h1>Hello World</h1>";
+    return readFileContent(path);
 }
 
 
