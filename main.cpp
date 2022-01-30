@@ -4,8 +4,25 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <cstring>
+#include <string>
 
 #define defaultBufferSize 4096
+
+
+char *handleRequest(char *requestRaw) {
+
+    std::string message(requestRaw);
+
+    //TODO...
+
+    return "HTTP/1.1 200 OK\r\n"
+           "Server: SollderHttp\r\n"
+           "Content-Type: text/html\r\n"
+           "Connection: Closed\r\n"
+           "\r\n"
+           "<h1>Hello World</h1>";
+}
+
 
 //Realloc could be more efficient, but for now it works
 char *read(int fd) {
@@ -15,15 +32,15 @@ char *read(int fd) {
     char *buffer = (char *) malloc(defaultBufferSize);
 
     while (true) {
-        size_t r = read(fd, buffer + alreadyRead, defaultBufferSize);
-        if(r > 0) {
+        size_t actualBytesRead = read(fd, buffer + alreadyRead, defaultBufferSize);
+        if (actualBytesRead == defaultBufferSize) {
             bufferSize += defaultBufferSize;
             buffer = (char *) realloc(buffer, bufferSize);
-            alreadyRead += r;
+            alreadyRead += actualBytesRead;
             printf("Reaaloc\n");
 
         }
-        if(r < defaultBufferSize) {
+        if (actualBytesRead < defaultBufferSize) {
             break;
         }
     }
@@ -43,12 +60,7 @@ void acceptConnection(int serverFd, sockaddr_in &address) {
     char *message = read(incomingConnectionFd);
     printf("%s\n", message);
 
-    char *response = "HTTP/1.1 500 OK\r\n"
-                     "Server: SollderHttp\r\n"
-                     "Content-Type: text/html\r\n"
-                     "Connection: Closed\r\n"
-                     "\r\n"
-                     "<h1>Hello World</h1>";
+    char *response = handleRequest(message);
 
     send(incomingConnectionFd, response, strlen(response), 0);
     close(incomingConnectionFd);
