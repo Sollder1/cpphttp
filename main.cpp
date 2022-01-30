@@ -4,14 +4,62 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <cstring>
-#include <string>
+
 
 #define defaultBufferSize 4096
+#define pathLength 1024
 
 
-char *handleRequest(char *requestRaw) {
+char *concat(char *a, char *b) {
 
-    std::string message(requestRaw);
+    char *concatenatedString = (char *) malloc(strlen(a) + strlen(b) - 1);
+
+    strcat(concatenatedString, a);
+    strcat(concatenatedString, b);
+
+}
+
+char *baseResponse() {
+    return "HTTP/1.1 200 OK\r\n"
+           "Server: SollderHttp\r\n"
+           "Content-Type: text/html\r\n"
+           "Connection: Closed\r\n"
+           "\r\n";
+}
+
+char *getStaticUnsupportedMethodErrorResponse() {
+
+    char *string = "<h1>415 - Unsupported Method</h1>"
+                   "The Method provided is not supported. We only support GET at the moment.";
+    return concat(baseResponse(), string);
+}
+
+char *handleRequest(const char *requestRaw) {
+
+    //Read and validade http method:
+    char *method = (char *) malloc(16);
+    for (int i = 0; i < 16; ++i) {
+        if (requestRaw[i] == ' ') {
+            memcpy(method, requestRaw, i);
+            break;
+        }
+    }
+    if (strcmp(method, "GET") != 0) {
+        return getStaticUnsupportedMethodErrorResponse();
+    }
+    printf("%s \n", method);
+
+
+    char *path = (char *) malloc(pathLength);
+    size_t offset = strlen(method) + 1;
+    for (int i = 0; i < pathLength; ++i) {
+        if (requestRaw[i + offset] == ' ') {
+            memcpy(path, requestRaw + offset, i);
+            break;
+        }
+    }
+
+    printf("%s \n", path);
 
     //TODO...
 
@@ -37,8 +85,6 @@ char *read(int fd) {
             bufferSize += defaultBufferSize;
             buffer = (char *) realloc(buffer, bufferSize);
             alreadyRead += actualBytesRead;
-            printf("Reaaloc\n");
-
         }
         if (actualBytesRead < defaultBufferSize) {
             break;
@@ -58,8 +104,6 @@ void acceptConnection(int serverFd, sockaddr_in &address) {
 
     //Read message
     char *message = read(incomingConnectionFd);
-    printf("%s\n", message);
-
     char *response = handleRequest(message);
 
     send(incomingConnectionFd, response, strlen(response), 0);
